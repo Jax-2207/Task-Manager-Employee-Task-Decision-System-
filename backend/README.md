@@ -41,6 +41,58 @@ A robust, role-based full-stack application designed to manage employee tasks an
 
 ## 🏗 System Architecture
 
+### Overall High-Level Architecture
+The application follows a standard 3-tier architecture, augmented with external services for authentication and WhatsApp bot integration.
+
+```mermaid
+graph TD
+    subgraph Clients
+        W[Web Browser<br/>React + Vite]
+        WA[WhatsApp Bot<br/>OpenClaw]
+    end
+
+    subgraph External Services
+        F[Firebase Auth<br/>Google Sign-In]
+        GC[Google Public<br/>X.509 Certs]
+    end
+
+    subgraph Backend Server - Flask
+        API[REST API Routes]
+        MW[Auth Middleware]
+        SVC[Service Layer<br/>Business Logic]
+        REP[Repository Layer<br/>Data Access]
+    end
+
+    subgraph Database
+        DB[(SQLite3 DB<br/>SQLAlchemy)]
+    end
+
+    W -- HTTP Requests --> API
+    WA -- HTTP POST<br/>Webhook --> API
+    W -- OAuth Popup --> F
+    
+    API --> MW
+    MW -- Fetch Certs --> GC
+    MW --> SVC
+    SVC --> REP
+    REP --> DB
+```
+
+### Task State Machine
+Tasks follow a strict lifecycle enforced by the backend service layer. Only admins can transition a task out of the `PROPOSED` state. Once a decision is made, it is final.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PROPOSED : Employee Creates Task
+    [*] --> ACCEPTED : Admin Creates Task
+    
+    PROPOSED --> ACCEPTED : Admin Approves
+    PROPOSED --> REJECTED : Admin Rejects
+    
+    ACCEPTED --> [*]
+    REJECTED --> [*]
+```
+
 ### Authentication Flow
 The system uses a hybrid authentication model. Administrative access uses secure, memory-backed session tokens, while employee access relies on stateless JWT verification using Google's public certificates.
 
