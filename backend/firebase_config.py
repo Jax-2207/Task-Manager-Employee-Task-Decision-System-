@@ -5,6 +5,7 @@ No service account JSON file needed.
 """
 
 import logging
+import os
 import time
 
 import requests
@@ -13,7 +14,7 @@ from cryptography.x509 import load_pem_x509_certificate
 
 logger = logging.getLogger(__name__)
 
-FIREBASE_PROJECT_ID = "fsassignintern"
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "fsassignintern")
 
 # Google's public cert endpoint for Firebase tokens
 _GOOGLE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
