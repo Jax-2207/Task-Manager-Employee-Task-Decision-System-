@@ -26,6 +26,7 @@ def require_auth(f):
     def decorated(*args, **kwargs):
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
+            logger.warning("Auth failed: missing or invalid Authorization header")
             raise UnauthorizedError("Missing or invalid Authorization header")
 
         token = auth_header.split("Bearer ", 1)[1]
@@ -36,22 +37,27 @@ def require_auth(f):
             from services.user_service import get_admin_user
             user = get_admin_user()
             if user is None:
+                logger.warning("Auth failed: admin token valid but admin user not found")
                 raise UnauthorizedError("Admin user not found")
             g.user = user
+            logger.info("Auth success: admin user %s", user.email)
             return f(*args, **kwargs)
 
         # Otherwise, verify as Firebase token (Google Sign-In)
         try:
             decoded = verify_firebase_token(token)
         except ValueError as e:
+            logger.warning("Auth failed: Firebase token invalid — %s", e)
             raise UnauthorizedError(str(e))
 
         firebase_uid = decoded["uid"]
         user = user_repository.get_by_firebase_uid(firebase_uid)
         if user is None:
+            logger.warning("Auth failed: Firebase uid=%s not registered", firebase_uid)
             raise UnauthorizedError("User not registered. Please sign in with Google first.")
 
         g.user = user
+        logger.info("Auth success: %s (%s)", user.email, user.employee_id)
         return f(*args, **kwargs)
 
     return decorated
